@@ -6,14 +6,14 @@ import java.util.List;
 
 import com.google.gwt.cell.client.DateCell;
 import com.google.gwt.core.client.EntryPoint;
-import com.google.gwt.user.cellview.client.CellTable;
+import com.google.gwt.dom.client.Style.Unit;
 import com.google.gwt.user.cellview.client.Column;
 import com.google.gwt.user.cellview.client.HasKeyboardSelectionPolicy.KeyboardSelectionPolicy;
 import com.google.gwt.user.cellview.client.TextColumn;
-import com.google.gwt.user.client.Window;
-import com.google.gwt.user.client.ui.RootPanel;
-import com.google.gwt.view.client.SelectionChangeEvent;
-import com.google.gwt.view.client.SingleSelectionModel;
+import com.google.gwt.user.client.ui.DockLayoutPanel;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.RootLayoutPanel;
+import com.google.gwt.view.client.ListDataProvider;
 
 public class GwtResizableDraggableColumns implements EntryPoint {
     /**
@@ -39,7 +39,15 @@ public class GwtResizableDraggableColumns implements EntryPoint {
 
     public void onModuleLoad() {
         // Create a CellTable.
-        CellTable<Contact> table = new CellTable<Contact>();
+        //        CellTable<Contact> table = new CellTable<Contact>();
+        //        // Set the total row count. This isn't strictly necessary, but it affects
+        //        // paging calculations, so its good habit to keep the row count up to date.
+        //        table.setRowCount(CONTACTS.size(), true);
+        //        // Push the data into the widget.
+        //        table.setRowData(0, CONTACTS);
+        ResizableDataGrid<Contact> table = new ResizableDataGrid<Contact>();
+        final ListDataProvider<Contact> dataProvider = new ListDataProvider<Contact>(CONTACTS);
+        dataProvider.addDataDisplay(table);
         table.setKeyboardSelectionPolicy(KeyboardSelectionPolicy.ENABLED);
         // Add a text column to show the name.
         TextColumn<Contact> nameColumn = new TextColumn<Contact>() {
@@ -48,7 +56,7 @@ public class GwtResizableDraggableColumns implements EntryPoint {
                 return object.name;
             }
         };
-        table.addColumn(nameColumn, new ResizableHeader<Contact>("Name", table, nameColumn));
+        table.addColumn(nameColumn, table.new DataGridResizableHeader("Name", nameColumn));
         // Add a date column to show the birthday.
         DateCell dateCell = new DateCell();
         Column<Contact, Date> dateColumn = new Column<Contact, Date>(dateCell) {
@@ -57,7 +65,7 @@ public class GwtResizableDraggableColumns implements EntryPoint {
                 return object.birthday;
             }
         };
-        table.addColumn(dateColumn, new ResizableHeader<Contact>("Birthday", table, dateColumn));
+        table.addColumn(dateColumn, table.new DataGridResizableHeader("Birthday", dateColumn));
         // Add a text column to show the address.
         TextColumn<Contact> addressColumn = new TextColumn<Contact>() {
             @Override
@@ -65,24 +73,17 @@ public class GwtResizableDraggableColumns implements EntryPoint {
                 return object.address;
             }
         };
-        table.addColumn(addressColumn, new ResizableHeader<Contact>("Address", table, addressColumn));
-        // Add a selection model to handle user selection.
-        final SingleSelectionModel<Contact> selectionModel = new SingleSelectionModel<Contact>();
-        table.setSelectionModel(selectionModel);
-        selectionModel.addSelectionChangeHandler(new SelectionChangeEvent.Handler() {
-            public void onSelectionChange(SelectionChangeEvent event) {
-                Contact selected = selectionModel.getSelectedObject();
-                if (selected != null) {
-                    Window.alert("You selected: " + selected.name);
-                }
-            }
-        });
-        // Set the total row count. This isn't strictly necessary, but it affects
-        // paging calculations, so its good habit to keep the row count up to date.
-        table.setRowCount(CONTACTS.size(), true);
-        // Push the data into the widget.
-        table.setRowData(0, CONTACTS);
+        table.addColumn(addressColumn, table.new DataGridResizableHeader("Address", addressColumn));
+        //
+        //
         // Add it to the root panel.
-        RootPanel.get().add(table);
+        final DockLayoutPanel dockLayoutPanel = new DockLayoutPanel(Unit.PX);
+        dockLayoutPanel.addNorth(new Label(), 50);
+        dockLayoutPanel.addEast(new Label(), 50);
+        dockLayoutPanel.addSouth(new Label(), 100);
+        dockLayoutPanel.addWest(new Label(), 100);
+        dockLayoutPanel.add(table);
+        RootLayoutPanel.get().add(dockLayoutPanel);
+        //        RootLayoutPanel.get().add(table);
     }
 }
