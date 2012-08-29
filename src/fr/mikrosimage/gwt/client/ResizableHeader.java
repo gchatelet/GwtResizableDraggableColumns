@@ -22,10 +22,17 @@ import com.google.gwt.user.client.Event.NativePreviewEvent;
 import com.google.gwt.user.client.Event.NativePreviewHandler;
 
 public abstract class ResizableHeader<T> extends Header<String> {
-    private static final Style.Cursor moveCursor = Cursor.POINTER;
+    //TODO Have following strings localized from separate properties file 
+    private static final String MOVE = "Move";
+	private static final String RESIZE = "Resize";
+	private static final String MOVE_tt = "Click and drag to move column";
+	private static final String RESIZE_tt = "Click and drag to resize column";
+	
+    private static final Style.Cursor moveCursor = Cursor.MOVE;    
     private static final Style.Cursor resizeCursor = Cursor.COL_RESIZE;
     private static final String RESIZE_COLOR = "#A49AED";
     private static final String MOVE_COLOR = "gray";
+    private static final String FOREGROUND_COLOR = "white";
     private static final double GHOST_OPACITY = .3;
     private static final int MINIMUM_COLUMN_WIDTH = 30;
     private final String title;
@@ -62,7 +69,7 @@ public abstract class ResizableHeader<T> extends Header<String> {
         void dragFinished();
     }
 
-    private static final int RESIZE_HANDLE_WIDTH = 9;
+    private static final int RESIZE_HANDLE_WIDTH = 34;
 
     private static NativeEvent getEventAndPreventPropagation(NativePreviewEvent event) {
         final NativeEvent nativeEvent = event.getNativeEvent();
@@ -92,6 +99,8 @@ public abstract class ResizableHeader<T> extends Header<String> {
             event.stopPropagation();
             mover = document.createDivElement();
             left = document.createSpanElement();
+            left.setInnerText(MOVE);
+            left.setAttribute("title", MOVE_tt);
             mover.appendChild(left);
             final Style lStyle = left.getStyle();
             setCursor(left, moveCursor);
@@ -102,10 +111,12 @@ public abstract class ResizableHeader<T> extends Header<String> {
             lStyle.setHeight(target.getOffsetHeight(), PX);
             lStyle.setTop(target.getOffsetTop(), PX);
             lStyle.setBackgroundColor(MOVE_COLOR);
-            lStyle.setOpacity(GHOST_OPACITY);
-            lStyle.setLeft(target.getOffsetLeft(), PX);
-            lStyle.setWidth(target.getOffsetWidth() - RESIZE_HANDLE_WIDTH, PX);
+            lStyle.setColor(FOREGROUND_COLOR);
+            lStyle.setLeft(target.getOffsetLeft() + target.getOffsetWidth() - 2*RESIZE_HANDLE_WIDTH, PX);
+            lStyle.setWidth(RESIZE_HANDLE_WIDTH, PX);
             right = document.createSpanElement();
+            right.setInnerText(RESIZE);
+            right.setAttribute("title", RESIZE_tt);
             mover.appendChild(right);
             final Style rStyle = right.getStyle();
             setCursor(right, resizeCursor);
@@ -116,6 +127,7 @@ public abstract class ResizableHeader<T> extends Header<String> {
             rStyle.setHeight(target.getOffsetHeight(), PX);
             rStyle.setTop(target.getOffsetTop(), PX);
             rStyle.setBackgroundColor(RESIZE_COLOR);
+            rStyle.setColor(FOREGROUND_COLOR);
             rStyle.setLeft(target.getOffsetLeft() + target.getOffsetWidth() - RESIZE_HANDLE_WIDTH, PX);
             rStyle.setWidth(RESIZE_HANDLE_WIDTH, PX);
             target.appendChild(mover);
@@ -123,14 +135,18 @@ public abstract class ResizableHeader<T> extends Header<String> {
 
         @Override
         public void onPreviewNativeEvent(NativePreviewEvent event) {
-            final NativeEvent nativeEvent = getEventAndPreventPropagation(event);
-            final Element element = nativeEvent.getEventTarget().cast();
-            final String eventType = nativeEvent.getType();
-            if (!(element == left || element == right)) {
-                if (!dragging && "mouseover".equals(eventType))
+            NativeEvent natEvent = event.getNativeEvent();
+            final Element element = natEvent.getEventTarget().cast();
+        	final String eventType = natEvent.getType();
+        	if (!(element == left || element == right)) {
+        		if ("mousedown".equals(eventType)) {
+        			//No need to do anything, the event will be passed on to the column sort handler
+        		}else if (!dragging && "mouseover".equals(eventType)) {
                     finish();
+        		}
                 return;
             }
+            final NativeEvent nativeEvent = getEventAndPreventPropagation(event);            
             if ("mousedown".equals(eventType)) {
                 if (element == right) {
                     left.removeFromParent();
