@@ -8,6 +8,7 @@ import com.google.gwt.dom.client.DivElement;
 import com.google.gwt.dom.client.Document;
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.NativeEvent;
+import com.google.gwt.dom.client.SpanElement;
 import com.google.gwt.dom.client.Style;
 import com.google.gwt.dom.client.Style.Cursor;
 import com.google.gwt.dom.client.Style.Position;
@@ -24,11 +25,10 @@ import com.google.gwt.user.client.Event.NativePreviewHandler;
 public abstract class ResizableHeader<T> extends Header<String> {
     //TODO Have following strings localized from separate properties file 
     private static final String MOVE = "Move";
-	private static final String RESIZE = "Resize";
-	private static final String MOVE_tt = "Click and drag to move column";
-	private static final String RESIZE_tt = "Click and drag to resize column";
-	
-    private static final Style.Cursor moveCursor = Cursor.MOVE;    
+    private static final String RESIZE = "Resize";
+    private static final String MOVE_tt = "Click and drag to move column";
+    private static final String RESIZE_tt = "Click and drag to resize column";
+    private static final Style.Cursor moveCursor = Cursor.MOVE;
     private static final Style.Cursor resizeCursor = Cursor.COL_RESIZE;
     private static final String RESIZE_COLOR = "#A49AED";
     private static final String MOVE_COLOR = "gray";
@@ -39,6 +39,7 @@ public abstract class ResizableHeader<T> extends Header<String> {
     private final Document document = Document.get();
     private final AbstractCellTable<T> table;
     private final Element tableElement;
+    private HeaderHelper current;
     protected final Column<T, ?> column;
 
     public ResizableHeader(String title, AbstractCellTable<T> table, Column<T, ?> column) {
@@ -58,11 +59,8 @@ public abstract class ResizableHeader<T> extends Header<String> {
 
     @Override
     public void onBrowserEvent(Context context, Element target, NativeEvent event) {
-        new HeaderHelper(target, event);
-    }
-
-    private static void setCursor(Element element, Cursor cursor) {
-        element.getStyle().setCursor(cursor);
+        if (current == null)
+            current = new HeaderHelper(target, event);
     }
 
     interface IDragCallback {
@@ -84,69 +82,59 @@ public abstract class ResizableHeader<T> extends Header<String> {
         style.setHeight(height, PX);
         style.setWidth(width, PX);
         style.setBackgroundColor(color);
-        style.setZIndex(1000);
     }
 
     private class HeaderHelper implements NativePreviewHandler, IDragCallback {
         private final HandlerRegistration handler = Event.addNativePreviewHandler(this);
-        final Element mover, left, right;
-        private boolean dragging;
         private final Element source;
+        private boolean dragging;
+        final Element mover, left, right;
 
         public HeaderHelper(Element target, NativeEvent event) {
             this.source = target;
+            System.out.println(source.getOffsetTop() + " " +source.getAbsoluteTop());
             event.preventDefault();
             event.stopPropagation();
             mover = document.createDivElement();
-            left = document.createSpanElement();
-            left.setInnerText(MOVE);
-            left.setAttribute("title", MOVE_tt);
+            final int leftBound = target.getOffsetLeft() + target.getOffsetWidth();
+            left = createSpanElement(MOVE, MOVE_tt, MOVE_COLOR, moveCursor, leftBound - 2 * RESIZE_HANDLE_WIDTH);
+            right = createSpanElement(RESIZE, RESIZE_tt, RESIZE_COLOR, resizeCursor, leftBound - RESIZE_HANDLE_WIDTH);
             mover.appendChild(left);
-            final Style lStyle = left.getStyle();
-            setCursor(left, moveCursor);
-            lStyle.setPosition(Position.ABSOLUTE);
-            lStyle.setTop(0, PX);
-            lStyle.setBottom(0, PX);
-            lStyle.setZIndex(1000);
-            lStyle.setHeight(target.getOffsetHeight(), PX);
-            lStyle.setTop(target.getOffsetTop(), PX);
-            lStyle.setBackgroundColor(MOVE_COLOR);
-            lStyle.setColor(FOREGROUND_COLOR);
-            lStyle.setLeft(target.getOffsetLeft() + target.getOffsetWidth() - 2*RESIZE_HANDLE_WIDTH, PX);
-            lStyle.setWidth(RESIZE_HANDLE_WIDTH, PX);
-            right = document.createSpanElement();
-            right.setInnerText(RESIZE);
-            right.setAttribute("title", RESIZE_tt);
             mover.appendChild(right);
-            final Style rStyle = right.getStyle();
-            setCursor(right, resizeCursor);
-            rStyle.setPosition(Position.ABSOLUTE);
-            rStyle.setTop(0, PX);
-            rStyle.setBottom(0, PX);
-            rStyle.setZIndex(1000);
-            rStyle.setHeight(target.getOffsetHeight(), PX);
-            rStyle.setTop(target.getOffsetTop(), PX);
-            rStyle.setBackgroundColor(RESIZE_COLOR);
-            rStyle.setColor(FOREGROUND_COLOR);
-            rStyle.setLeft(target.getOffsetLeft() + target.getOffsetWidth() - RESIZE_HANDLE_WIDTH, PX);
-            rStyle.setWidth(RESIZE_HANDLE_WIDTH, PX);
-            target.appendChild(mover);
+            source.appendChild(mover);
+        }
+        
+        private SpanElement createSpanElement(String innerText, String title, String backgroundColor, Cursor cursor, double left){
+            final SpanElement span = document.createSpanElement();
+            span.setInnerText(innerText);
+            span.setAttribute("title", title);
+            final Style style = span.getStyle();
+            style.setCursor(cursor);
+            style.setPosition(Position.ABSOLUTE);
+            style.setBottom(0, PX);
+            style.setHeight(source.getOffsetHeight(), PX);
+            style.setTop(source.getOffsetTop(), PX);
+            style.setColor(FOREGROUND_COLOR);
+            style.setWidth(RESIZE_HANDLE_WIDTH, PX);
+            style.setLeft(left, PX);
+            style.setBackgroundColor(backgroundColor);
+            return span;
         }
 
         @Override
         public void onPreviewNativeEvent(NativePreviewEvent event) {
-            NativeEvent natEvent = event.getNativeEvent();
+            final NativeEvent natEvent = event.getNativeEvent();
             final Element element = natEvent.getEventTarget().cast();
-        	final String eventType = natEvent.getType();
-        	if (!(element == left || element == right)) {
-        		if ("mousedown".equals(eventType)) {
-        			//No need to do anything, the event will be passed on to the column sort handler
-        		}else if (!dragging && "mouseover".equals(eventType)) {
-                    finish();
-        		}
+            final String eventType = natEvent.getType();
+            if (!(element == left || element == right)) {
+                if ("mousedown".equals(eventType)) {
+                    //No need to do anything, the event will be passed on to the column sort handler
+                } else if (!dragging && "mouseover".equals(eventType)) {
+                    cleanUp();
+                }
                 return;
             }
-            final NativeEvent nativeEvent = getEventAndPreventPropagation(event);            
+            final NativeEvent nativeEvent = getEventAndPreventPropagation(event);
             if ("mousedown".equals(eventType)) {
                 if (element == right) {
                     left.removeFromParent();
@@ -157,14 +145,15 @@ public abstract class ResizableHeader<T> extends Header<String> {
             }
         }
 
-        private void finish() {
+        private void cleanUp() {
             handler.removeHandler();
             mover.removeFromParent();
+            current = null;
         }
 
         public void dragFinished() {
             dragging = false;
-            finish();
+            cleanUp();
         }
     }
 
