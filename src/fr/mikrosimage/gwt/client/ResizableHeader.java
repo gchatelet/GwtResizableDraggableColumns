@@ -41,8 +41,17 @@ public abstract class ResizableHeader<T> extends Header<String> {
     private final Element tableElement;
     private HeaderHelper current;
     protected final Column<T, ?> column;
+    private final String moveStyle;
+    private final String resizeStyle;
+    private final String moveToolTip;
+    private final String resizeToolTip;   
 
     public ResizableHeader(String title, AbstractCellTable<T> table, Column<T, ?> column) {
+        this(title, table, column, null, null, null, null);
+    }
+
+    public ResizableHeader(String title, AbstractCellTable<T> table, Column<T, ?> column,
+                           String moveStyle, String resizeStyle, String moveToolTip, String resizeToolTip) {
         super(new HeaderCell());
         if (title == null || table == null || column == null)
             throw new NullPointerException();
@@ -50,6 +59,10 @@ public abstract class ResizableHeader<T> extends Header<String> {
         this.column = column;
         this.table = table;
         this.tableElement = table.getElement();
+        this.moveStyle = moveStyle;
+        this.resizeStyle = resizeStyle;
+        this.moveToolTip = moveToolTip;
+        this.resizeToolTip = resizeToolTip;
     }
 
     @Override
@@ -97,13 +110,37 @@ public abstract class ResizableHeader<T> extends Header<String> {
             event.stopPropagation();
             mover = document.createDivElement();
             final int leftBound = target.getOffsetLeft() + target.getOffsetWidth();
-            left = createSpanElement(MOVE, MOVE_tt, MOVE_COLOR, moveCursor, leftBound - 2 * RESIZE_HANDLE_WIDTH);
-            right = createSpanElement(RESIZE, RESIZE_tt, RESIZE_COLOR, resizeCursor, leftBound - RESIZE_HANDLE_WIDTH);
+        if (moveStyle != null) {
+                left = createSpanElement(moveStyle, moveToolTip, leftBound - 2 * RESIZE_HANDLE_WIDTH);
+            }else {
+                left = createSpanElement(MOVE, MOVE_tt, MOVE_COLOR, moveCursor, leftBound - 2 * RESIZE_HANDLE_WIDTH);
+            }
+	    if (resizeStyle != null) {
+                right = createSpanElement(resizeStyle, resizeToolTip, leftBound - RESIZE_HANDLE_WIDTH);
+            }else {
+                right = createSpanElement(RESIZE, RESIZE_tt, RESIZE_COLOR, resizeCursor, leftBound - RESIZE_HANDLE_WIDTH);
+            }
             mover.appendChild(left);
             mover.appendChild(right);
             source.appendChild(mover);
         }
         
+        private SpanElement createSpanElement(String styleClassName, String title, double left){
+            final SpanElement span = document.createSpanElement();
+            span.setClassName(styleClassName);
+            if (title != null) {
+                span.setTitle(title);
+            }
+            final Style style = span.getStyle();
+            style.setPosition(Position.ABSOLUTE);
+            style.setBottom(0, PX);
+            style.setHeight(source.getOffsetHeight(), PX);
+            style.setTop(source.getOffsetTop(), PX);
+            style.setWidth(RESIZE_HANDLE_WIDTH, PX);
+            style.setLeft(left, PX);
+            return span;
+        }
+
         private SpanElement createSpanElement(String innerText, String title, String backgroundColor, Cursor cursor, double left){
             final SpanElement span = document.createSpanElement();
             span.setInnerText(innerText);
