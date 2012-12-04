@@ -251,7 +251,10 @@ public abstract class ResizableHeader<T> extends Header<String> {
             this.dragCallback = dragCallback;
             final int clientX = event.getClientX();
             columnWidth = target.getOffsetWidth();
-            final Element tr = target.getParentElement();
+            Element tr = target.getParentElement();
+            while (!tr.getNodeName().equals("TR")) {
+            	tr = tr.getParentElement();
+            }
             final int columns = tr.getChildCount();
             columnXPositions = new int[columns + 1];
             columnXPositions[0] = tr.getAbsoluteLeft();
